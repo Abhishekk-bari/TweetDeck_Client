@@ -1,5 +1,6 @@
 import { GraphQLClient } from 'graphql-request';
 
+// api section
 
 const isClient = typeof window !== "undefined";
 
