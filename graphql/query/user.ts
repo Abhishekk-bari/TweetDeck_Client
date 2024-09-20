@@ -8,22 +8,42 @@ export const verifyUserGoogleTokenQuery = graphql(`
 `);
 
 export const getCurrentUserQuery = graphql(`
-query GetCurrentUser {
-  getCurrentUser {
-    id
-    profileImageURL
-    email
-    firstName
-    lastName
-    tweets {
+  query GetCurrentUser {
+    getCurrentUser {
       id
-      content
-      author {
-        firstName
-        lastName
-        profileImageURL
+      profileImageURL
+      email
+      firstName
+      lastName
+      tweets {
+        id
+        content
+        author {
+          firstName
+          lastName
+          profileImageURL
+        }
       }
     }
   }
+`);
+
+export const getUserByIdQuery = graphql(`
+  #graphql
+  query GetUserById($id: ID!) {
+getUserById(id: $id) {
+  id
+  firstName
+  lastName
+  tweets {
+    content
+    id
+    author {
+      firstName
+      lastName
+      profileImageURL
+    }
+  }
+}
 }
 `);

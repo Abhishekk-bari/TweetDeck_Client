@@ -3,21 +3,31 @@ import FeedCard from "@/components/FeedCard";
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import { Tweet } from "@/hooks/tweet";
 import { useCurrentUser } from "@/hooks/user";
-import { NextPage } from "next";
+import { GetServerSideProps, NextPage } from "next";
 import Image from "next/image";
 import { FaArrowLeft } from "react-icons/fa";
+import { graphqlClient } from "@/clients/api";
+import { getUserByIdQuery } from "@/graphql/query/user";
+
+// Define the expected response type
+interface GetUserByIdResponse {
+  getUserById: {
+    id: string;
+    profileImageURL: string;
+    tweets?: Tweet[];
+    // Add any other fields returned by the query
+  };
+}
 
 const UserProfilePage: NextPage = () => {
   const { user } = useCurrentUser();
   const router = useRouter();
 
-  console.log(router.query);
-
   return (
     <div>
       <Twitterlayout>
         <div>
-          <nav className=" py-3 px-3 flex gap-3 item-center">
+          <nav className="py-3 px-3 flex gap-3 item-center">
             <FaArrowLeft className="text-xl" />
             <div>
               <h1 className="text-1xl font-bold">Abhishek Bari</h1>
@@ -46,6 +56,23 @@ const UserProfilePage: NextPage = () => {
       </Twitterlayout>
     </div>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const id = context.query.id as string | undefined;
+
+  if (!id) return { notFound: true };
+
+  // Properly typing the request response
+  const userInfo: GetUserByIdResponse = await graphqlClient.request(getUserByIdQuery, { id });
+
+  if (!userInfo?.getUserById) return { notFound: true };
+
+  return {
+    props: {
+      userInfo: userInfo.getUserById, // This is now correctly typed
+    },
+  };
 };
 
 export default UserProfilePage;
