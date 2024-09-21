@@ -1,15 +1,25 @@
 import React, { useCallback, useState } from "react";
 import { useCurrentUser } from "@/hooks/user";
-// Import Image from next/image
 import Image from "next/image";
-import { Tweet, useGetAllTweets, useCreateTweet } from "@/hooks/tweet";
+import { Tweet, useCreateTweet } from "@/hooks/tweet";
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import { FaRegImage } from "react-icons/fa";
 import FeedCard from "@/components/FeedCard";
+import { GetServerSideProps } from "next";
+import { getAllTweetsQuery } from '@/graphql/query/tweet';
+import { graphqlClient } from './../clients/api';
 
-export default function Home() {
+// Define the expected GraphQL response type
+interface GetAllTweetsResponse {
+  getAllTweets: Tweet[];
+}
+
+interface HomeProps {
+  tweets?: Tweet[];
+}
+
+export default function Home(props: HomeProps) {
   const { user } = useCurrentUser();
-  const { tweets = [] } = useGetAllTweets();
   const { mutate } = useCreateTweet();
 
   const [content, setContent] = useState("");
@@ -48,9 +58,9 @@ export default function Home() {
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className=" w-full bg-transparent text-xl px-3 border-b border-slate-700"
+                  className="w-full bg-transparent text-xl px-3 border-b border-slate-700"
                   rows={3}
-                  placeholder="Whats happening?"
+                  placeholder="What's happening?"
                 ></textarea>
                 <div className="mt-2 flex justify-between items-center">
                   <FaRegImage onClick={handleSelectImage} className="text-sm" />
@@ -65,10 +75,31 @@ export default function Home() {
             </div>
           </div>
         </div>
-        {tweets?.map((tweet) =>
+        {props.tweets?.map((tweet) =>
           tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null
         )}
       </Twitterlayout>
     </div>
   );
 }
+
+// getServerSideProps fetches all tweets from the server
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (context) => {
+  try {
+    // Request all tweets from GraphQL
+    const allTweets = await graphqlClient.request<GetAllTweetsResponse>(getAllTweetsQuery);  // Explicitly define response type
+
+    return {
+      props: {
+        tweets: allTweets.getAllTweets, // Now allTweets is properly typed as Tweet[]
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching tweets:", error);
+    return {
+      props: {
+        tweets: [], // If error, return an empty array of tweets
+      },
+    };
+  }
+};

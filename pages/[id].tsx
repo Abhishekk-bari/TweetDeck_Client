@@ -8,6 +8,7 @@ import Image from "next/image";
 import { FaArrowLeft } from "react-icons/fa";
 import { graphqlClient } from "@/clients/api";
 import { getUserByIdQuery } from "@/graphql/query/user";
+import { User } from "@/gql";
 
 // Define the expected response type
 interface GetUserByIdResponse {
@@ -19,9 +20,14 @@ interface GetUserByIdResponse {
   };
 }
 
-const UserProfilePage: NextPage = () => {
-  const { user } = useCurrentUser();
+interface ServerProps {
+  userInfo?: User
+}
+
+const UserProfilePage: NextPage<ServerProps> = (props) => { 
   const router = useRouter();
+
+
 
   return (
     <div>
@@ -31,13 +37,14 @@ const UserProfilePage: NextPage = () => {
             <FaArrowLeft className="text-xl" />
             <div>
               <h1 className="text-1xl font-bold">Abhishek Bari</h1>
-              <h1 className="text-md font-bold text-slate-500">34 Tweets</h1>
+              <h1 className="text-md font-bold text-slate-500">
+                {props.userInfo?.tweets?.length} Tweets</h1>
             </div>
           </nav>
-          <div className="p-4 border">
-            {user?.profileImageURL && (
+          <div className="p-4">
+            {props.userInfo?.profileImageURL && (
               <Image
-                src={user?.profileImageURL}
+                src={props.userInfo?.profileImageURL}
                 alt="user-image"
                 className="rounded-full"
                 width={100}
@@ -48,7 +55,7 @@ const UserProfilePage: NextPage = () => {
           </div>
 
           <div>
-            {(user as { tweets?: Tweet[] })?.tweets?.map((tweet) => (
+            {(props.userInfo as { tweets?: Tweet[] })?.tweets?.map((tweet) => (
               <FeedCard data={tweet as Tweet} key={tweet?.id} />
             ))}
           </div>
@@ -58,10 +65,10 @@ const UserProfilePage: NextPage = () => {
   );
 };
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+export const getServerSideProps: GetServerSideProps<ServerProps> = async (context) => {
   const id = context.query.id as string | undefined;
 
-  if (!id) return { notFound: true };
+  if (!id) return { notFound: true, props: { userInfo: undefined} };
 
   // Properly typing the request response
   const userInfo: GetUserByIdResponse = await graphqlClient.request(getUserByIdQuery, { id });
@@ -70,7 +77,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   return {
     props: {
-      userInfo: userInfo.getUserById, // This is now correctly typed
+      userInfo: userInfo.getUserById as User, // This is now correctly typed
     },
   };
 };

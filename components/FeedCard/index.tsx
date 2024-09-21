@@ -5,6 +5,7 @@ import { FiMessageCircle } from "react-icons/fi";
 import { CiHeart } from "react-icons/ci";
 import { IoCloudUploadOutline } from "react-icons/io5";
 import { Tweet } from '@/hooks/tweet'
+import Link from 'next/link';
 
 
 
@@ -30,7 +31,9 @@ const FeedCard: React.FC<FeedCardProps> = (props) => {
             </div>
 
             <div className="col-span-9">                                             {/* Symbol in feed section like,comment etc.. */}
-                <h5>{data.author?.firstName} {data.author?.lastName}</h5>
+                <h5>
+                    <Link href={`/${data.author?.id}`}>{data.author?.firstName} {data.author?.lastName}</Link>
+                </h5>
                 <p>{data.content}</p>
                 <div className="flex justify-between mt-5 items-center text-xl p-2 ">
                 <div>
