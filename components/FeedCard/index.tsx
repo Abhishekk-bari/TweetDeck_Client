@@ -35,6 +35,9 @@ const FeedCard: React.FC<FeedCardProps> = (props) => {
                     <Link href={`/${data.author?.id}`}>{data.author?.firstName} {data.author?.lastName}</Link>
                 </h5>
                 <p>{data.content}</p>
+                {
+                    data.imageURL && <Image src={data.imageURL} alt="image" width={400} height={400} />
+                }
                 <div className="flex justify-between mt-5 items-center text-xl p-2 ">
                 <div>
                 <FiMessageCircle />
