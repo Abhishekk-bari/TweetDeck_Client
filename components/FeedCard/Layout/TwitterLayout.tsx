@@ -1,5 +1,4 @@
-import React, { useCallback, useMemo } from "react";
-
+import React, { useCallback, useMemo, useRef, useEffect } from "react";
 import { BsTwitter } from "react-icons/bs";
 import {
   MdHomeFilled,
@@ -7,7 +6,7 @@ import {
   MdBookmarkAdd,
   MdOutlineAccountCircle,
 } from "react-icons/md";
-import { FaSlackHash, FaEnvelope, FaRegImage } from "react-icons/fa";
+import { FaSlackHash, FaEnvelope } from "react-icons/fa";
 import { CgMoreO } from "react-icons/cg";
 import { useCurrentUser } from "@/hooks/user";
 import Image from 'next/image';
@@ -17,15 +16,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { graphqlClient } from "@/clients/api";
 import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
-import { VerifyGoogleTokenQuery } from './../../../gql/types';
 
-// Moved this inside the component scope to ensure 'user' is accessible
-interface TwitterSidebarButton {
-  title: string;
-  icon: React.ReactNode;
-  link: string;
-}
-// Define the interface for the GraphQL response
 interface VerifyGoogleTokenResponse {
   verifyGoogleToken: string;
 }
@@ -35,22 +26,23 @@ interface TwitterlayoutProps {
 }
 
 const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
-  const { user } = useCurrentUser(); // Move this up so it's available
+  const { user } = useCurrentUser();
   const queryClient = useQueryClient();
+  const feedRef = useRef<HTMLDivElement>(null); // Reference for the feed section
 
-  const SidebarMenuItems: TwitterSidebarButton[] = useMemo(() => [
+  const SidebarMenuItems = useMemo(() => [
     { title: "Home", icon: <MdHomeFilled />, link: '/' },
     { title: "Explore", icon: <FaSlackHash />, link: '/' },
     { title: "Notify", icon: <MdNotificationsActive />, link: '/' },
     { title: "Messages", icon: <FaEnvelope />, link: '/' },
     { title: "Bookmark", icon: <MdBookmarkAdd />, link: '/' },
-    { title: "Profile", icon: <MdOutlineAccountCircle />, link: `/${user?.id}` }, // Fix backtick usage here
+    { title: "Profile", icon: <MdOutlineAccountCircle />, link: `/${user?.id}` },
     { title: "More", icon: <CgMoreO />, link: '/' },
   ], [user?.id]);
 
   const handleLoginWithGoogle = useCallback(
     async (cred: CredentialResponse) => {
-      const googleToken = cred.credential;
+      const googleToken = cred.credential; 
       if (!googleToken) return toast.error(`Google token not found`);
 
       try {
@@ -58,28 +50,37 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
           verifyUserGoogleTokenQuery,
           { token: googleToken }
         );
-
         const { verifyGoogleToken } = response;
 
-    console.log(verifyGoogleToken);
+        if (verifyGoogleToken) {
+          window.localStorage.setItem('__twitter_token', verifyGoogleToken);
+          toast.success('Verified successfully');
+          await queryClient.invalidateQueries({ queryKey: ['current-user'] });
+        }
+      } catch (error) {
+        console.error('Error during GraphQL request:', error);
+        toast.error('Verification failed');
+      }
+    },
+    [queryClient]
+  );
 
-     // Store the token in local storage
-    if (verifyGoogleToken) {
-      window.localStorage.setItem('__twitter_token', verifyGoogleToken);
-      toast.success('Verified successfully');
-      console.log(verifyGoogleToken);
-
-      // Invalidate the 'current-user' query to refetch updated user data
-      await queryClient.invalidateQueries({ queryKey: ['current-user'] });
+  // Scroll event handler
+  const handleScroll = useCallback(() => {
+    if (feedRef.current) {
+      console.log("Feed section scrolled", feedRef.current.scrollTop);
     }
-  } catch (error) {
-    console.error('Error during GraphQL request:', error);
-    toast.error('Verification failed'); 
-  }
-},
-[queryClient]
-);
+  }, []);
 
+  useEffect(() => {
+    const feedElement = feedRef.current;
+    if (feedElement) {
+      feedElement.addEventListener("scroll", handleScroll);
+      return () => {
+        feedElement.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, [handleScroll]);
 
   return (
     <div>
@@ -90,7 +91,6 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
               <BsTwitter />
             </div>
 
-            {/* List */}
             <div className="mt-1 pr-5 text-xl ">
               <ul>
                 {SidebarMenuItems.map((item) => (
@@ -133,9 +133,14 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
           )}
         </div>
 
-        <div className="col-span-10 sm:col-span-5 border-r-[1px] border-l-[1px] h-screen border-gray-600">
+        {/* Feed Section with hidden scrollbar */}
+        <div
+          ref={feedRef} // Assigning the feed section reference
+          className="col-span-10 sm:col-span-5 border-r-[1px] border-l-[1px] h-screen border-gray-600 overflow-y-auto scrollbar-hide" // Added 'scrollbar-hide' class
+        >
           {props.children}
         </div>
+
         <div className="col-span-0 sm:col-span-3 p-5">
           {!user && (
             <div className="p-5 bg-slate-700 rounded-lg">
