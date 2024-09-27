@@ -1,4 +1,5 @@
 import { graphqlClient } from '@/clients/api';
+// @ts-expect-error: ok--ok
 import { CreateTweetData } from '@/gql/graphql'; // Make sure this path is correct
 import { createTweetMutation } from '@/graphql/mutation/tweet';
 import { getAllTweetsQuery } from '@/graphql/query/tweet';

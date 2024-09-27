@@ -1,4 +1,4 @@
-import { useRouter } from "next/router";
+// import { useRouter } from "next/router";
 import FeedCard from "@/components/FeedCard";
 import Twitterlayout from "@/components/FeedCard/Layout/TwitterLayout";
 import { Tweet } from "@/hooks/tweet";
@@ -8,10 +8,9 @@ import Image from "next/image";
 import { FaArrowLeft } from "react-icons/fa";
 import { graphqlClient } from "@/clients/api";
 import { getUserByIdQuery } from "@/graphql/query/user";
-import { User } from "@/gql"; // Ensure User type includes following and followers
 import { useCallback, useMemo } from "react";
 import { followUserMutation, unfollowUserMutation } from "@/graphql/mutation/user";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Define the expected response type
 interface GetUserByIdResponse {
@@ -38,7 +37,7 @@ interface CurrentUser {
 }
 
 const UserProfilePage: NextPage<ServerProps> = (props) => {
-  const router = useRouter();
+  // const {} = useRouter();                                  Error here today
   const { user: currentUser } = useCurrentUser() as { user: CurrentUser }; // Cast to include following
   const queryClient = useQueryClient();
 
@@ -49,21 +48,21 @@ const UserProfilePage: NextPage<ServerProps> = (props) => {
         (el) => el?.id === props.userInfo?.id
       ) ?? -1) >= 0
     );
-  }, [currentUser?.following, props.userInfo?.id]);
+  }, [currentUser?.following, props.userInfo]);
 
   const handleFollowUser = useCallback(async () => {
     if (!props.userInfo?.id) return;
     await graphqlClient.request(followUserMutation, { to: props.userInfo?.id });
     
     await queryClient.invalidateQueries({ queryKey: ["current-user"] });
-  }, [props.userInfo?.id, queryClient]);
+  }, [props.userInfo, queryClient]);                                       // here some error 
   
   const handleUnfollowUser = useCallback(async () => {
     if (!props.userInfo?.id) return;
 
     try {
       // Check if the follow relationship exists
-      const followExists = await graphqlClient.request(
+      const followExists = await graphqlClient.request<{follows:[]}>( 
         `
         query CheckFollow($from: ID!, $to: ID!) {
           follows(where: { fromId: $from, toId: $to }) {
