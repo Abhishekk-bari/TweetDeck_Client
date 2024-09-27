@@ -8,7 +8,7 @@ import {
 } from "react-icons/md";
 import { FaSlackHash, FaEnvelope } from "react-icons/fa";
 import { CgMoreO } from "react-icons/cg";
-import { useCurrentUser } from "@/hooks/user";
+import { useCurrentUser } from "@/hooks/user"; // Ensure this hook returns correct type
 import Image from 'next/image';
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,14 +21,23 @@ interface VerifyGoogleTokenResponse {
   verifyGoogleToken: string;
 }
 
+interface User {
+  firstName: string;
+  lastName: string;
+  id: string;
+  email: string;
+  profileImageURL?: string;
+  recommendedUsers?: User[]; // Ensure this property is included
+}
+
 interface TwitterlayoutProps {
   children: React.ReactNode;
 }
 
 const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
-  const { user } = useCurrentUser();
+  const { user } = useCurrentUser() as { user: User | null }; // Ensure correct typing
   const queryClient = useQueryClient();
-  const feedRef = useRef<HTMLDivElement>(null); // Reference for the feed section
+  const feedRef = useRef<HTMLDivElement>(null);
 
   const SidebarMenuItems = useMemo(() => [
     { title: "Home", icon: <MdHomeFilled />, link: '/' },
@@ -97,7 +106,7 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
                   <li key={item.title}>
                     <Link className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-3 py-3 w-fit cursor-pointer" href={item.link}>
                       <span className="text-3xl">{item.icon}</span>
-                      <span className="hidden sm:inline ">{item.title}</span>
+                      <span className="hidden sm:inline">{item.title}</span>
                     </Link>
                   </li>
                 ))}
@@ -114,7 +123,7 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
           </div>
 
           {user && (
-            <div className="absolute bottom-5 flex gap-2 items-center bg-slate-800  px-3 py-2 rounded-full">
+            <div className="absolute bottom-5 flex gap-2 items-center bg-slate-800 px-3 py-2 rounded-full">
               {user.profileImageURL && (
                 <Image
                   className="rounded-full"
@@ -135,19 +144,39 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
 
         {/* Feed Section with hidden scrollbar */}
         <div
-          ref={feedRef} // Assigning the feed section reference
-          className="col-span-10 sm:col-span-5 border-r-[1px] border-l-[1px] h-screen border-gray-600 overflow-y-auto scrollbar-hide" // Added 'scrollbar-hide' class
+          ref={feedRef}
+          className="col-span-10 sm:col-span-5 border-r-[1px] border-l-[1px] h-screen border-gray-600 overflow-y-auto scrollbar-hide"
         >
           {props.children}
         </div>
 
+        {/* Recommended Users Section */}
         <div className="col-span-0 sm:col-span-3 p-5">
-          {!user && (
+          {!user ? (
             <div className="p-5 bg-slate-700 rounded-lg">
-              <h1 className="my-1 text-1xl">New user Here?</h1>
+              <h1 className="my-1 text-xl">New user Here?</h1>
               <GoogleLogin onSuccess={handleLoginWithGoogle} />
             </div>
-          )}
+          ): ( 
+          <div className="p-4 bg-slate-700 rounded-lg">
+            <h1 className="my-1 text-lg">Users you may know</h1>
+            {user?.recommendedUsers?.map((el) => ( 
+            <div key={el.id}> 
+              {el.profileImageURL && (
+                <Image 
+                  src={el.profileImageURL} 
+                  alt={el.firstName}
+                  width={50}
+                  height={50}
+                  
+                />
+              )}
+              {el.firstName}
+            </div>
+          ))}
+            </div>
+            )}
+          
         </div>
       </div>
     </div>

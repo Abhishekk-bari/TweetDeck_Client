@@ -15,11 +15,29 @@ export const getCurrentUserQuery = graphql(`
       email
       firstName
       lastName
+      recommendedUsers {
+      id
+        firstName
+        lastName
+        profileImageURL
+      }
+      followers {
+        id
+        firstName
+        lastName
+        profileImageURL
+      }
+      following {
+        id
+        firstName
+        lastName
+        profileImageURL
+      }
       tweets {
         id
         content
         author {
-        id
+          id
           firstName
           lastName
           profileImageURL
@@ -32,21 +50,33 @@ export const getCurrentUserQuery = graphql(`
 export const getUserByIdQuery = graphql(`
   #graphql
   query GetUserById($id: ID!) {
-getUserById(id: $id) {
-  id
-  firstName
-  lastName
-  profileImageURL
-  tweets {
-    content
-    id
-    author {
-    id
+    getUserById(id: $id) {
+      id
       firstName
       lastName
       profileImageURL
+      following {
+        id
+        firstName
+        lastName
+        profileImageURL
+      }
+        followers {
+        id
+        firstName
+        lastName
+        profileImageURL
+      }
+      tweets {
+        content
+        id
+        author {
+          id
+          firstName
+          lastName
+          profileImageURL
+        }
+      }
     }
   }
-}
-}
 `);

@@ -8,7 +8,10 @@ import Image from "next/image";
 import { FaArrowLeft } from "react-icons/fa";
 import { graphqlClient } from "@/clients/api";
 import { getUserByIdQuery } from "@/graphql/query/user";
-import { User } from "@/gql";
+import { User } from "@/gql"; // Ensure User type includes following and followers
+import { useCallback, useMemo } from "react";
+import { followUserMutation, unfollowUserMutation } from "@/graphql/mutation/user";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 
 // Define the expected response type
 interface GetUserByIdResponse {
@@ -16,18 +19,74 @@ interface GetUserByIdResponse {
     id: string;
     profileImageURL: string;
     tweets?: Tweet[];
+    following?: { id: string }[];  // Ensure this field exists
+    followers?: { id: string }[];  // Ensure this field exists
+    firstName: string;
+    lastName: string;
     // Add any other fields returned by the query
   };
 }
 
 interface ServerProps {
-  userInfo?: User
+  userInfo?: GetUserByIdResponse["getUserById"]; // Adjusted typing here
 }
 
-const UserProfilePage: NextPage<ServerProps> = (props) => { 
+// Define a proper User type including following and followers
+interface CurrentUser {
+  id: string;
+  following?: { id: string }[]; // Ensure following is defined
+}
+
+const UserProfilePage: NextPage<ServerProps> = (props) => {
   const router = useRouter();
+  const { user: currentUser } = useCurrentUser() as { user: CurrentUser }; // Cast to include following
+  const queryClient = useQueryClient();
 
+  const amIFollowing = useMemo(() => {
+    if (!props.userInfo) return false;
+    return (
+      (currentUser?.following?.findIndex(
+        (el) => el?.id === props.userInfo?.id
+      ) ?? -1) >= 0
+    );
+  }, [currentUser?.following, props.userInfo?.id]);
 
+  const handleFollowUser = useCallback(async () => {
+    if (!props.userInfo?.id) return;
+    await graphqlClient.request(followUserMutation, { to: props.userInfo?.id });
+    
+    await queryClient.invalidateQueries({ queryKey: ["current-user"] });
+  }, [props.userInfo?.id, queryClient]);
+  
+  const handleUnfollowUser = useCallback(async () => {
+    if (!props.userInfo?.id) return;
+
+    try {
+      // Check if the follow relationship exists
+      const followExists = await graphqlClient.request(
+        `
+        query CheckFollow($from: ID!, $to: ID!) {
+          follows(where: { fromId: $from, toId: $to }) {
+            id
+          }
+        }
+        `,
+        { from: currentUser?.id, to: props.userInfo?.id }
+      );
+
+      if (!followExists || !followExists.follows || followExists.follows.length === 0) {
+        console.error("Follow relationship does not exist.");
+        return;
+      }
+
+      // If follow relationship exists, proceed to unfollow
+      await graphqlClient.request(unfollowUserMutation, { to: props.userInfo?.id });
+      
+      await queryClient.invalidateQueries({ queryKey: ["current-user"] });
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+    }
+  }, [props.userInfo?.id, queryClient, currentUser?.id]);
 
   return (
     <div>
@@ -36,12 +95,15 @@ const UserProfilePage: NextPage<ServerProps> = (props) => {
           <nav className="py-3 px-3 flex gap-3 item-center">
             <FaArrowLeft className="text-xl" />
             <div>
-              <h1 className="text-1xl font-bold">Abhishek Bari</h1>
+              <h1 className="text-1xl font-bold">
+                {props.userInfo?.firstName} {props.userInfo?.lastName}
+              </h1>
               <h1 className="text-md font-bold text-slate-500">
-                {props.userInfo?.tweets?.length} Tweets</h1>
+                {props.userInfo?.tweets?.length} Tweets
+              </h1>
             </div>
           </nav>
-          <div className="p-4">
+          <div className="p-4 border-b border-slate-800">
             {props.userInfo?.profileImageURL && (
               <Image
                 src={props.userInfo?.profileImageURL}
@@ -51,7 +113,31 @@ const UserProfilePage: NextPage<ServerProps> = (props) => {
                 height={100}
               />
             )}
-            <h1 className="text-2xl font-bold mt-5">Abhishek Bari</h1>
+            <h1 className="text-2xl font-bold mt-5">
+              {props.userInfo?.firstName} {props.userInfo?.lastName}
+            </h1>
+            <div className="flex justify-between items-center">
+              <div className="flex gap-4 mt-2 text-sm text-grey-400">
+                <span>{props.userInfo?.followers?.length} followers</span>
+                <span>{props.userInfo?.following?.length} following</span>
+              </div>
+              {currentUser?.id !== props.userInfo?.id && (
+                <>
+                  {amIFollowing ? (
+                    <button onClick={handleUnfollowUser} className="bg-white text-black px-3 py-1 rounded-full text-sm">
+                      Unfollow
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleFollowUser}
+                      className="bg-white text-black px-3 py-1 rounded-full text-sm"
+                    >
+                      Follow
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <div>
@@ -68,7 +154,7 @@ const UserProfilePage: NextPage<ServerProps> = (props) => {
 export const getServerSideProps: GetServerSideProps<ServerProps> = async (context) => {
   const id = context.query.id as string | undefined;
 
-  if (!id) return { notFound: true, props: { userInfo: undefined} };
+  if (!id) return { notFound: true, props: { userInfo: undefined } };
 
   // Properly typing the request response
   const userInfo: GetUserByIdResponse = await graphqlClient.request(getUserByIdQuery, { id });
@@ -77,7 +163,7 @@ export const getServerSideProps: GetServerSideProps<ServerProps> = async (contex
 
   return {
     props: {
-      userInfo: userInfo.getUserById as User, // This is now correctly typed
+      userInfo: userInfo.getUserById,
     },
   };
 };
