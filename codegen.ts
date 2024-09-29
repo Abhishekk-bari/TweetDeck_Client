@@ -2,7 +2,7 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   overwrite: true,
-  schema: "http://localhost:8000/graphql",
+  schema: "https://tweetdeck-server.onrender.com/graphql",
   documents: "**/*.{tsx,ts}",
   generates: {
     "gql/": {
