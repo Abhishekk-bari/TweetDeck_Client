@@ -91,6 +91,8 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
     }
   }, [handleScroll]);
 
+  
+
   return (
     <div>
       <div className="grid grid-cols-12 h-screen w-screen sm:px-56">
@@ -158,23 +160,22 @@ const Twitterlayout: React.FC<TwitterlayoutProps> = (props) => {
               <GoogleLogin onSuccess={handleLoginWithGoogle} />
             </div>
           ): ( 
-          <div className="p-4 bg-slate-700 rounded-lg">
+            <div className="p-4 bg-slate-700 rounded-lg">
             <h1 className="my-1 text-lg">Users you may know</h1>
-            {user?.recommendedUsers?.map((el) => ( 
-            <div key={el.id}> 
-              {el.profileImageURL && (
-                <Image 
-                  src={el.profileImageURL} 
-                  alt={el.firstName}
-                  width={50}
-                  height={50}
-                  
-                />
-              )}
-              {el.firstName}
-            </div>
-          ))}
-            </div>
+            {user?.recommendedUsers?.map((el) => (
+              <div key={el.id}>
+                {el.profileImageURL && (
+                  <Image
+                    src={el.profileImageURL}
+                    alt={el.firstName}
+                    width={50}
+                    height={50}
+                  />
+                )}
+                {el.firstName}
+              </div>
+            ))}
+          </div>
             )}
           
         </div>
